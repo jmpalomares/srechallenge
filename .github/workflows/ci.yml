@@ -1,0 +1,77 @@
+name: srechallenge CI
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the main branch
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  testing:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v3
+
+      # Configuring Python 3.9 for testing
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+      
+      # Installing dependencies. Only flake8 for linting and flask for the app.
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 
+          pip install -r requirements.txt
+      
+      # Linting with flake8. Leaving mistakes on purpose.
+      - name: Lint with flake8
+        run: |
+          # stop the build if there are Python syntax errors or undefined names
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+      # Running Unit test using unittest module. Only 1 test.
+      - name: Test with unittest
+        run: |
+          python -m unittest
+
+  # Building the image and pushing it to dockerhub
+  docker:
+      runs-on: ubuntu-latest
+      # Job depending of testing before building the docker image.
+      needs: testing
+      steps:
+
+      # Can be useful if you want to add emulation support with QEMU to be able to build against more platforms.
+        -
+          name: Set up QEMU
+          uses: docker/setup-qemu-action@v2
+      
+      # Action will create and boot a builder using by default the docker-container builder driver. This is not required but recommended using it to be able to build multi-platform images, export cache, etc.
+        -
+          name: Set up Docker Buildx
+          uses: docker/setup-buildx-action@v2
+      
+      # Login to dockerhub with my account.
+        -
+          name: Login to DockerHub
+          uses: docker/login-action@v2
+          with:
+            username: ${{ secrets.DOCKERHUB_USERNAME }}
+            password: ${{ secrets.DOCKERHUB_TOKEN }}
+        -
+          name: Build and push
+          uses: docker/build-push-action@v3
+          with:
+            push: true
+            tags: jmpalomares/srechallenge:latest
