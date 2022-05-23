@@ -28,6 +28,8 @@ If saludation is not the correct one, it will return an error with status code 5
     Content-Length: 48
     Connection: close
 
+Perhaps it should be better to return an error 400 instead.
+
 I did some changes because the task was asking for an individual deployment for each customer.
 
 As the app is not using databases queries, there is not risk for SQL injections attacks.
